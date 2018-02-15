@@ -1,17 +1,37 @@
 const server = require('net').createServer();
+let sockets = {};
+let users = 0;
+
+function timestamp() {
+    const now = new Date();
+    return `${now.getHours()}:${now.getMinutes()}`;
+}
 
 server.on('connection', socket => {
+    users++;
+    socket.id = users;
+
     console.log('Client connected');
-    socket.write('Welcome new client!\n');
+    socket.write('Please type your name:');
 
     socket.on('data', (data) => {
-        console.log('data is', data);
-        socket.write('data is: ');
-        socket.write(data + '\n', 'utf8');
+        if (!sockets[socket.id]) {
+            socket.name = data.toString().trim();
+            socket.write(`Welcome ${socket.name}!\n`);
+            sockets[socket.id] = socket;
+            return;
+        }
+        Object.entries(sockets)
+            .forEach(
+                ([key, cs]) => {
+                    if (socket.id == key) return;
+                    cs.write(`${socket.name} ${timestamp()}: `);
+                    cs.write(data);
+                });
     })
-    socket.setEncoding('utf8');
 
     socket.on('end', () => {
+        delete sockets[socket.id];
         console.log('Client disconnected.');
     })
 })
